@@ -1,7 +1,7 @@
 package fileserver
 
 import (
-	"dfs-client/secure"
+	"github.com/conorbrady/dfs-client/secure"
 	"bufio"
 	"fmt"
 	"regexp"

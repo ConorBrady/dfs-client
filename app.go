@@ -8,7 +8,7 @@ import(
 	"bufio"
 	"strings"
 
-	"dfs-client/dfs"
+	"github.com/conorbrady/dfs-client/dfs"
 	)
 
 func main (){

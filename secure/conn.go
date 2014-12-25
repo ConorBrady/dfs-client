@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 	"strconv"
-	"dfs-client/crypto"
+	"github.com/conorbrady/dfs-client/crypto"
 	"encoding/base64"
 	"regexp"
 	"errors"

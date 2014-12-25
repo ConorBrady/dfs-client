@@ -1,8 +1,8 @@
 package dfs
 
 import (
-	"dfs-client/auth"
-	"dfs-client/directory"
+	"github.com/conorbrady/dfs-client/auth"
+	"github.com/conorbrady/dfs-client/directory"
 	"errors"
 	)
 

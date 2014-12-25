@@ -3,7 +3,7 @@ package dfs
 import (
 	"code.google.com/p/go-uuid/uuid"
 	"os"
-	"dfs-client/fileserver"
+	"github.com/conorbrady/dfs-client/fileserver"
 )
 
 type File struct {
