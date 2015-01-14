@@ -44,7 +44,7 @@ func main (){
 		log.Fatal(err.Error())
 	}
 
-	file.Write([]byte("test file boom\n"))
+	file.Write([]byte("test file boom with more words\nand a new line\n"))
 
 	if err := file.Close(); err != nil {
 		log.Fatal(err.Error())
@@ -58,5 +58,8 @@ func main (){
 
 	fileRead := bufio.NewReader(differentFile)
 	line, _ := fileRead.ReadString('\n')
+	fmt.Println(line)
+
+	line, _ = fileRead.ReadString('\n')
 	fmt.Println(line)
 }
