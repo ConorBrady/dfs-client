@@ -1,8 +1,7 @@
 package dfs
 
 import (
-	"code.google.com/p/go-uuid/uuid"
-	"os"
+	"errors"
 	"github.com/conorbrady/dfs-client/fileserver"
 )
 
@@ -13,36 +12,10 @@ type File struct {
 	serverTicket string
 	name string
 	writeEnable bool
-	uuid string
-	file *os.File
+	seekHead int
 }
 
 func MakeFile(fsAddr string, username string, sessionKey []byte, serverTicket string, name string, writeEnable bool) ( *File, error ) {
-
-	uuid := uuid.New()
-
-	var file *os.File = nil
-
-	if !writeEnable {
-
-		fs, fsErr := fileserver.Connect(fsAddr,username,sessionKey,serverTicket)
-
-		if fsErr != nil {
-			return nil, fsErr
-		}
-
-		if err := fs.Pull(name,os.TempDir()+uuid); err != nil {
-			return nil, err
-		}
-
-		fs.Close()
-
-		file, _ = os.Open(os.TempDir()+uuid)
-
-	} else {
-
-		file, _ = os.Create(os.TempDir()+uuid)
-	}
 
 	return &File{
 		fsAddr,
@@ -51,35 +24,52 @@ func MakeFile(fsAddr string, username string, sessionKey []byte, serverTicket st
 		serverTicket,
 		name,
 		writeEnable,
-		uuid,
-		file,
+		0,
 	}, nil
 }
 
+func (f* File)fs() *fileserver.FileServer{
+	fs, _ := fileserver.Connect(f.fsAddr,f.username,f.sessionKey,f.serverTicket)
+	return fs
+}
+
 func (f* File)Read(p []byte) (n int, err error) {
-	return f.file.Read(p)
+
+	if !f.writeEnable {
+
+		start, data, err := f.fs().Read(f.name,f.seekHead)
+		if err != nil {
+			return 0, err
+		}
+
+		n := copy(p,data[f.seekHead-start:])
+		f.seekHead = f.seekHead + n
+		return n, nil
+
+	} else {
+		return 0, errors.New("Cannot read in write mode")
+	}
 }
 
 func (f* File)Write(p []byte) (n int, err error) {
-	return f.file.Write(p)
+
+	if f.writeEnable {
+
+		if err := f.fs().Write(f.name,f.seekHead,p); err != nil{
+			return 0, err
+		}
+
+		n := len(p)
+
+		f.seekHead = f.seekHead + n
+		return n, nil
+
+	} else {
+		return 0, errors.New("Cannot write in read mode")
+	}
 }
 
 func (f* File)Close() error {
 
-	if f.writeEnable {
-
-		fs, fsErr := fileserver.Connect(f.fsAddr,f.username,f.sessionKey,f.serverTicket)
-
-		if fsErr != nil {
-			return fsErr
-		}
-
-		if err := fs.Push(f.name,os.TempDir()+f.uuid); err != nil {
-			return err
-		}
-
-		fs.Close()
-	}
-
-	return f.file.Close()
+	return nil
 }

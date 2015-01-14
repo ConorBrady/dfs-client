@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"errors"
-	"os"
 	"strconv"
 	)
 
@@ -30,75 +29,87 @@ func Connect(address string, username string, sessionKey []byte, serverTicket st
 	}, nil
 }
 
-func (fs * FileServer)Pull(filename string, tempFilename string) error {
+func (fs * FileServer)Read(filename string, offset int) (start int, data []byte, err error) {
 
 	fs.conn.Write([]byte("READ_FILE: "+filename+"\n"))
+	fs.conn.Write([]byte("OFFSET: "+strconv.Itoa(offset)+"\n"))
 
 	line, err := fs.reader.ReadString('\n')
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 
-	r, _ := regexp.Compile("\\ACONTENT_LENGTH:\\s*(\\d+)\\s*\\z")
+	r, _ := regexp.Compile("\\ASTART:\\s*(\\d+)\\s*\\z")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 2 {
-		return errors.New("Server responded with error")
+		return 0, nil, errors.New("Server responded with error")
+	}
+
+	start, _ = strconv.Atoi(matches[1])
+
+	line, err = fs.reader.ReadString('\n')
+	if err != nil {
+		return 0, nil, err
+	}
+
+	r, _ = regexp.Compile("\\AHASH:\\s*(\\S+)\\s*\\z")
+	matches = r.FindStringSubmatch(line)
+	if len(matches) < 2 {
+		return 0, nil, errors.New("Server responded with error")
+	}
+
+	//hash := matches[1]
+
+	line, err = fs.reader.ReadString('\n')
+	if err != nil {
+		return 0, nil, err
+	}
+
+	r, _ = regexp.Compile("\\ACONTENT_LENGTH\\s*:\\s*(\\d+)\\s*\\z")
+	matches = r.FindStringSubmatch(line)
+	if len(matches) < 2 {
+		return 0, nil, errors.New("Server responded with error")
 	}
 
 	contentLength, _ := strconv.Atoi(matches[1])
 
-	tempFile, _ := os.Create(tempFilename)
+	buffer := make([]byte,contentLength)
 
-	buffer := make([]byte,128)
-	readCount := 0
+	_, bErr := fs.reader.Read(buffer)
 
-	for contentLength > readCount {
-		n, _ := fs.reader.Read(buffer)
-		readCount += n
-		tempFile.Write(buffer[:n])
-	}
-
-	return tempFile.Close()
+	return start, buffer, bErr
 }
 
-func (fs * FileServer)Push(filename string, tempFilename string) error {
-
-	tempFile, err := os.Open(tempFilename)
-
-	if err != nil {
-		return err
-	}
-
-	fi, _ := tempFile.Stat()
-	contentLength := fi.Size()
+func (fs * FileServer)Write(filename string, start int, data []byte) error {
 
 	if _, err := fs.conn.Write([]byte("WRITE_FILE: "+filename+"\n")); err != nil {
 		return err
 	}
 
-	if _, err := fs.conn.Write([]byte(fmt.Sprintf("CONTENT_LENGTH: %d\n",fi.Size()))); err != nil {
+	if _, err := fs.conn.Write([]byte(fmt.Sprintf("START: %d\n",start))); err != nil {
 		return err
 	}
 
-	reader := bufio.NewReader(tempFile)
+	if _, err := fs.conn.Write([]byte(fmt.Sprintf("CONTENT_LENGTH: %d\n",len(data)))); err != nil {
+		return err
+	}
 
-	buffer := make([]byte,128)
-	readCount := int64(0)
-
-	for contentLength > readCount {
-		n, _ := reader.Read(buffer)
-		readCount += int64(n)
-		fs.conn.Write(buffer[:n])
+	if _, err := fs.conn.Write(data); err != nil {
+		return err
 	}
 
 	line, _ := fs.reader.ReadString('\n')
-	r, _ := regexp.Compile("\\A\\s*SUCCESS\\s*\\z")
+	r, _ := regexp.Compile("\\A\\s*WROTE_BLOCK:\\s*(\\S+)\\s*\\z")
 	if !r.MatchString(line) {
 		return errors.New("Server did not respond with success")
 	}
 
-	return tempFile.Close()
-
+	line, _ = fs.reader.ReadString('\n')
+	r, _ = regexp.Compile("\\A\\s*HASH:\\s*(\\S+)\\s*\\z")
+	if !r.MatchString(line) {
+		return errors.New("Server did not respond with success")
+	}
+	return nil
 }
 
 func (fs * FileServer)Close() {
