@@ -38,7 +38,7 @@ func main (){
 
 	dfs := dfs.Connect(*asAddress,*dsAddress,username,password)
 
-	file, err := dfs.Create("~/Desktop/something-test.txt");
+	file, err := dfs.Create("new2.txt");
 
 	if err != nil {
 		log.Fatal(err.Error())
@@ -50,7 +50,7 @@ func main (){
 		log.Fatal(err.Error())
 	}
 
-	differentFile, diffErr := dfs.Open("~/Desktop/something-test.txt")
+	differentFile, diffErr := dfs.Open("new2.txt")
 
 	if diffErr != nil {
 		log.Fatal(diffErr.Error())
