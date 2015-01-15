@@ -12,9 +12,10 @@ type DFS struct {
 	username string
 	serverTicket string
 	dirServAdd string
+	caching bool
 }
 
-func Connect(authServAdd string, dirServAdd string, username string, password string) *DFS {
+func Connect(authServAdd string, dirServAdd string, username string, password string, caching bool) *DFS {
 
 	authServ := auth.ConnectToAuthServ(authServAdd)
 
@@ -27,6 +28,7 @@ func Connect(authServAdd string, dirServAdd string, username string, password st
 		username,
 		serverTicket,
 		dirServAdd,
+		caching,
 	}
 }
 
@@ -34,25 +36,6 @@ func (d* DFS)Open(filename string) (*File, error) {
 
 	dir, err := directory.Connect(d.dirServAdd,d.username,d.sessionKey,d.serverTicket)
 	if err != nil {
-		dir.Close()
-		return nil, err
-	}
-
-	fsAddr := dir.Locate(filename)
-	dir.Close()
-
-	if fsAddr == nil {
-		return nil, errors.New("Could not locate address for fileserver")
-	} else {
-		return MakeFile(*fsAddr, d.username, d.sessionKey, d.serverTicket, filename, false)
-	}
-}
-
-func (d* DFS)Create(filename string) (*File, error) {
-
-	dir, err := directory.Connect(d.dirServAdd,d.username,d.sessionKey,d.serverTicket)
-	if err != nil {
-		dir.Close()
 		return nil, err
 	}
 
@@ -63,6 +46,6 @@ func (d* DFS)Create(filename string) (*File, error) {
 	if fsAddr == nil {
 		return nil, errors.New("Could not locate address for fileserver")
 	} else {
-		return MakeFile(*fsAddr, d.username, d.sessionKey, d.serverTicket, filename, true)
+		return MakeFile(*fsAddr, d.username, d.sessionKey, d.serverTicket, filename, d.caching)
 	}
 }

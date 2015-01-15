@@ -21,7 +21,7 @@ func fsConnect(address string, username string, sessionKey []byte, serverTicket 
 	conn, err := secure.Connect(address, username, sessionKey, serverTicket)
 
 	if err != nil {
-		conn.Close()
+		fmt.Println(err.Error())
 		return nil, err
 	}
 
@@ -137,36 +137,52 @@ func (fs * FileServer)read(filename string, block_index int) (hash string, data 
 	return hash, buffer, bErr
 }
 
-func (fs * FileServer)write(filename string, start int, data []byte) error {
+func (fs * FileServer)write(filename string, start int, data []byte) (string, error) {
+
+	if ( start % BLOCK_SIZE ) + len(data) > BLOCK_SIZE {
+		return "", errors.New("Cannot perform writes across blocks")
+	}
 
 	if _, err := fs.conn.Write([]byte("WRITE_FILE: "+filename+"\n")); err != nil {
-		return err
+		return "", err
 	}
 
 	if _, err := fs.conn.Write([]byte(fmt.Sprintf("START: %d\n",start))); err != nil {
-		return err
+		return "", err
 	}
 
 	if _, err := fs.conn.Write([]byte(fmt.Sprintf("CONTENT_LENGTH: %d\n",len(data)))); err != nil {
-		return err
+		return "", err
+	}
+
+	if _, err := fs.conn.Write([]byte("DATA:")); err != nil {
+		return "", err
 	}
 
 	if _, err := fs.conn.Write(data); err != nil {
-		return err
+		return "", err
 	}
 
 	line, _ := fs.reader.ReadString('\n')
-	r, _ := regexp.Compile("\\A\\s*WROTE_BLOCK:\\s*(\\S+)\\s*\\z")
+	r, _ := regexp.Compile("\\A\\s*WROTE_BLOCK:\\s*(\\d+)\\s*\\z")
 	if !r.MatchString(line) {
-		return errors.New("Server did not respond with success")
+		return "", errors.New("Server did not respond with success")
 	}
 
-	line, _ = fs.reader.ReadString('\n')
-	r, _ = regexp.Compile("\\A\\s*HASH:\\s*(\\S+)\\s*\\z")
-	if !r.MatchString(line) {
-		return errors.New("Server did not respond with success")
+	line, err := fs.reader.ReadString('\n')
+	if err != nil {
+		return "", err
 	}
-	return nil
+
+	r, _ = regexp.Compile("\\AHASH:\\s*(\\S+)\\s*\\z")
+	matches := r.FindStringSubmatch(line)
+	if len(matches) < 2 {
+		return "", errors.New("Server responded with error")
+	}
+
+	hash := matches[1]
+
+	return hash, nil
 }
 
 func (fs * FileServer)close() {

@@ -24,7 +24,7 @@ func Connect(address string, username string, sessionKey []byte, serverTicket st
 	secureServAddr, ssAddrErr := net.ResolveTCPAddr("tcp4",address)
 
 	if ssAddrErr != nil {
-		return nil, errors.New("Valid Secure Server address must be specified")
+		return nil, errors.New("Valid Secure Server address must be specified, recieved "+address)
 	}
 
 	encryptedConn, ssConnErr := net.DialTCP("tcp4",nil,secureServAddr)
@@ -89,6 +89,7 @@ func Connect(address string, username string, sessionKey []byte, serverTicket st
 func (ss* SecureConn)ReadLoop() {
 
 	for {
+
 		line, _ := ss.encryptedConnReader.ReadString('\n')
 		enc, _ := base64.StdEncoding.DecodeString(line)
 		for _, b := range crypto.DecryptToBytes(enc,ss.sessionKey) {
@@ -100,7 +101,8 @@ func (ss* SecureConn)ReadLoop() {
 func (ss* SecureConn)WriteLoop() {
 
 	for {
-		data := make([]byte,16)
+
+		data := make([]byte,32)
 		for i, _ := range data {
 			b := <-ss.writeBuffer
 			data[i] = b
@@ -116,6 +118,7 @@ func (ss* SecureConn)WriteLoop() {
 }
 
 func (ss* SecureConn)Read(p []byte) (n int, err error) {
+
 	n = 1
 	err = nil
 	b := <-ss.readBuffer
