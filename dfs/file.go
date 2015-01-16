@@ -69,7 +69,7 @@ func (f* File)Read(p []byte) (n int, err error) {
 		hash, read, err := f.fs().read(f.name,blockIndex)
 		data = read
 		if err != nil {
-			fmt.Println("A read error occured "+err.Error())
+			fmt.Println("A read error occured: "+err.Error())
 			return 0, err
 		}
 

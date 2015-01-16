@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"errors"
 	"strconv"
+	"crypto/sha1"
+	"encoding/hex"
 	)
 
 const BLOCK_SIZE = 4096
@@ -101,7 +103,7 @@ func (fs * FileServer)read(filename string, block_index int) (hash string, data 
 	r, _ := regexp.Compile("\\ASTART:\\s*(\\d+)\\s*\\z")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 2 {
-		return "", nil, errors.New("Server responded with error")
+		return "", nil, errors.New("Error parsing START")
 	}
 
 	line, err = fs.reader.ReadString('\n')
@@ -112,7 +114,7 @@ func (fs * FileServer)read(filename string, block_index int) (hash string, data 
 	r, _ = regexp.Compile("\\AHASH:\\s*(\\S+)\\s*\\z")
 	matches = r.FindStringSubmatch(line)
 	if len(matches) < 2 {
-		return "", nil, errors.New("Server responded with error")
+		return "", nil, errors.New("Error parsing hash")
 	}
 
 	hash = matches[1]
@@ -130,11 +132,24 @@ func (fs * FileServer)read(filename string, block_index int) (hash string, data 
 
 	contentLength, _ := strconv.Atoi(matches[1])
 
+	data = make([]byte,0)
 	buffer := make([]byte,contentLength)
+	for len(data) < contentLength {
+		n, _ := fs.reader.Read(buffer)
+		data = append(data,buffer[ :n]...)
+	}
 
-	_, bErr := fs.reader.Read(buffer)
+	data = data[ :contentLength]
+	hasher := sha1.New()
+	hasher.Write(data)
+	expectedHash := hex.EncodeToString(hasher.Sum(nil))
 
-	return hash, buffer, bErr
+	if hash != expectedHash {
+		return hash, data, nil
+		return "", nil, errors.New("Download failed with mismatched hashes")
+	}
+
+	return hash, data, nil
 }
 
 func (fs * FileServer)write(filename string, start int, data []byte) (string, error) {
@@ -163,8 +178,16 @@ func (fs * FileServer)write(filename string, start int, data []byte) (string, er
 		return "", err
 	}
 
+	if _, err := fs.conn.Write([]byte{'\n'}); err != nil {
+		return "", err
+	}
+
+	hasher := sha1.New()
+	hasher.Write(data)
+	expectedHash := hex.EncodeToString(hasher.Sum(nil))
+
 	line, _ := fs.reader.ReadString('\n')
-	r, _ := regexp.Compile("\\A\\s*WROTE_BLOCK:\\s*(\\d+)\\s*\\z")
+	r, _ := regexp.Compile("\\A\000*WROTE_BLOCK:\\s*(\\d+)\\s*\\z")
 	if !r.MatchString(line) {
 		return "", errors.New("Server did not respond with success")
 	}
@@ -174,7 +197,7 @@ func (fs * FileServer)write(filename string, start int, data []byte) (string, er
 		return "", err
 	}
 
-	r, _ = regexp.Compile("\\AHASH:\\s*(\\S+)\\s*\\z")
+	r, _ = regexp.Compile("\\A\000*HASH:\\s*(\\S+)\\s*\\z")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 2 {
 		return "", errors.New("Server responded with error")
@@ -182,6 +205,11 @@ func (fs * FileServer)write(filename string, start int, data []byte) (string, er
 
 	hash := matches[1]
 
+	if hash != expectedHash {
+		return "", errors.New("Hashes do not match, upload failed")
+	}
+
+	fmt.Println("Chunk uploaded")
 	return hash, nil
 }
 

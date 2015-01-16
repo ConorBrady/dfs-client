@@ -92,8 +92,11 @@ func (ss* SecureConn)ReadLoop() {
 
 		line, _ := ss.encryptedConnReader.ReadString('\n')
 		enc, _ := base64.StdEncoding.DecodeString(line)
-		for _, b := range crypto.DecryptToBytes(enc,ss.sessionKey) {
-			ss.readBuffer <- b
+		data := crypto.DecryptToBytes(enc,ss.sessionKey)
+		if len(data) > 0 {
+			for i := 1; i <= int(data[0]); i++ {
+				ss.readBuffer <- data[i]
+			}
 		}
 	}
 }
@@ -102,11 +105,11 @@ func (ss* SecureConn)WriteLoop() {
 
 	for {
 
-		data := make([]byte,32)
-		for i, _ := range data {
+		data := make([]byte,64)
+		for i := 1; i < len(data); i++ {
 			b := <-ss.writeBuffer
 			data[i] = b
-
+			data[0] = byte(i) // First byte indicates length of data
 			if b == '\n' {
 				break
 			}

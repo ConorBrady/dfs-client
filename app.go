@@ -44,13 +44,13 @@ func main (){
 		log.Fatal(rErr.Error())
 	}
 
-	fileLocal, lErr := os.Open("planet2.jpg")
+	fileLocal, lErr := os.Create("planet4.jpg")
 
 	if lErr != nil {
 		log.Fatal(lErr.Error())
 	}
 
-	bufio.NewReader(fileLocal).WriteTo(fileRemote)
+	bufio.NewReader(fileRemote).WriteTo(fileLocal)
 
 	// file.Write([]byte("test file boom with more words\nand a new line\n"))
 	//
