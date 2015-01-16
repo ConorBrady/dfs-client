@@ -3,6 +3,7 @@ package dfs
 import (
 	"time"
 	"fmt"
+	"io"
 )
 
 type CacheBlock struct {
@@ -88,7 +89,11 @@ func (f* File)Read(p []byte) (n int, err error) {
 	n = copy(p,data[f.seekHead%BLOCK_SIZE:])
 	f.seekHead = f.seekHead + n
 
-	return n, nil
+	if n == 0 {
+		return 0, io.EOF
+	} else {
+		return n, nil
+	}
 }
 
 func (f* File)Write(data []byte) (n int, err error) {
