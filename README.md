@@ -6,7 +6,7 @@ of an example.
 
 ## Setup Instructions
 1. Setup Go
-	1. [Install Go](https://golang.org/doc/install)
+	1. [Install Go](https://golang.org/doc/install) >=1.3.3
 	2. Navigate to a directory that will contain your Go directory
 	3. Create the folder hierarchy
 
