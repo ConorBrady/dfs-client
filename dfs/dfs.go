@@ -46,6 +46,6 @@ func (d* DFS)Open(filename string) (*File, error) {
 	if fsAddr == nil {
 		return nil, errors.New("Could not locate address for fileserver")
 	} else {
-		return MakeFile(*fsAddr, d.username, d.sessionKey, d.serverTicket, filename, d.caching)
+		return makeFile(*fsAddr, d.username, d.sessionKey, d.serverTicket, filename, d.caching)
 	}
 }

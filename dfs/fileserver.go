@@ -33,16 +33,16 @@ func fsConnect(address string, username string, sessionKey []byte, serverTicket 
 	}, nil
 }
 
-func (fs * FileServer)validateCache(filename string, cache []CacheBlock) error {
+func (fs * FileServer)validateCache(filename string, cache []cacheBlock) error {
 
-	fs.conn.Write([]byte("REQUEST_CHECKSUMS: "+filename))
+	fs.conn.Write([]byte("REQUEST_CHECKSUMS: "+filename+"\n"))
 
 	for i, cb := range cache {
 		if cb.valid {
 			fs.conn.Write([]byte("INDEX: "+strconv.Itoa(i)+"\n"))
 		}
 	}
-	fs.conn.Write([]byte("END_REQUEST_CHECKSUMS"))
+	fs.conn.Write([]byte("END_REQUEST_CHECKSUMS\n"))
 
 	line, err := fs.reader.ReadString('\n')
 	if err != nil {
@@ -84,9 +84,11 @@ func (fs * FileServer)validateCache(filename string, cache []CacheBlock) error {
 		hash := matches[1]
 
 		if cache[index].hash != hash {
+			fmt.Printf("Invalidated cache at index %d\n",index)
 			cache[index].valid = false
 		}
 	}
+	fmt.Println("Cache validation complete")
 	return nil
 }
 
@@ -187,7 +189,7 @@ func (fs * FileServer)write(filename string, start int, data []byte) (string, er
 	expectedHash := hex.EncodeToString(hasher.Sum(nil))
 
 	line, _ := fs.reader.ReadString('\n')
-	r, _ := regexp.Compile("\\A\000*WROTE_BLOCK:\\s*(\\d+)\\s*\\z")
+	r, _ := regexp.Compile("\\AWROTE_BLOCK:\\s*(\\d+)\\s*\\z")
 	if !r.MatchString(line) {
 		return "", errors.New("Server did not respond with success")
 	}
@@ -197,7 +199,7 @@ func (fs * FileServer)write(filename string, start int, data []byte) (string, er
 		return "", err
 	}
 
-	r, _ = regexp.Compile("\\A\000*HASH:\\s*(\\S+)\\s*\\z")
+	r, _ = regexp.Compile("\\AHASH:\\s*(\\S+)\\s*\\z")
 	matches := r.FindStringSubmatch(line)
 	if len(matches) < 2 {
 		return "", errors.New("Server responded with error")

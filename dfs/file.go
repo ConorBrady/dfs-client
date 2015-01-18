@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-type CacheBlock struct {
+type cacheBlock struct {
 	hash string
 	valid bool
 	data []byte
@@ -19,11 +19,11 @@ type File struct {
 	serverTicket string
 	name string
 	seekHead int
-	cache []CacheBlock
+	cache []cacheBlock
 	caching bool
 }
 
-func MakeFile(fsAddr string, username string, sessionKey []byte, serverTicket string, name string, caching bool) ( *File, error ) {
+func makeFile(fsAddr string, username string, sessionKey []byte, serverTicket string, name string, caching bool) ( *File, error ) {
 
 	f := &File{
 		fsAddr,
@@ -32,7 +32,7 @@ func MakeFile(fsAddr string, username string, sessionKey []byte, serverTicket st
 		serverTicket,
 		name,
 		0,
-		make([]CacheBlock,0),
+		make([]cacheBlock,0),
 		caching,
 	}
 
@@ -66,7 +66,6 @@ func (f* File)Read(p []byte) (n int, err error) {
 
 	} else {
 
-		fmt.Printf("Requesting %d\n",blockIndex)
 		hash, read, err := f.fs().read(f.name,blockIndex)
 		data = read
 		if err != nil {
@@ -77,7 +76,7 @@ func (f* File)Read(p []byte) (n int, err error) {
 		if f.caching { // Add to cache
 
 			for len(f.cache) <= blockIndex {
-				f.cache = append(f.cache,CacheBlock{"",false,nil})
+				f.cache = append(f.cache,cacheBlock{"",false,nil})
 			}
 
 			f.cache[blockIndex].hash = hash
@@ -85,7 +84,6 @@ func (f* File)Read(p []byte) (n int, err error) {
 			f.cache[blockIndex].valid = true
 		}
 	}
-	fmt.Printf("Got data %d bytes",len(data))
 	n = copy(p,data[f.seekHead%BLOCK_SIZE:])
 	f.seekHead = f.seekHead + n
 
@@ -131,9 +129,4 @@ func (f* File)Write(data []byte) (n int, err error) {
 	}
 
 	return n, nil
-}
-
-func (f* File)Close() error {
-
-	return nil
 }
