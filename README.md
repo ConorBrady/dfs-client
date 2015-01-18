@@ -1,12 +1,12 @@
 ## Overview
 
-This repo contains a client implementation of [Distributed File System]. It
+This repo contains a client implementation of [Distributed File System](http://github.com/conorbrady/distributed-file-system). It
 provides a library written in Go with a simple implementation in app.go for means
 of an example.
 
 ## Setup Instructions
 1. Setup Go
-	1. [Install Go]
+	1. [Install Go](https://golang.org/doc/install)
 	2. Navigate to a directory that will contain your Go directory
 	3. Create the folder hierarchy
 
@@ -74,14 +74,14 @@ Command line options are:
 	-AS <address>
 
 This must be specified to be the address of an instance of the accompanying
-[Distributed File System] run in `-mode AS`
+[Distributed File System](http://github.com/conorbrady/distributed-file-system) run in `-mode AS`
 
 ### Directory Server Address
 
 	-DS <address>
 
 This must be specified to be the address of an instance of the accompanying
-[Distributed File System] run in `-mode DS`
+[Distributed File System](http://github.com/conorbrady/distributed-file-system) run in `-mode DS`
 
 ### Caching Mode
 
